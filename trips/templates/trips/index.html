@@ -42,16 +42,19 @@ function initialize() {
 function makeMarkers(map, positions) {
   var j = 0;
   var pts = positions.length;
+  var bounds = new google.maps.LatLngBounds();
   for (;j<pts;j++) {
     var currentPos = positions[j];
-    
+    var latLong = new google.maps.LatLng(currentPos.lat, currentPos.long);
+    bounds.extend(latLong);
     var markerOpts = {
-      position: new google.maps.LatLng(currentPos.lat, currentPos.long),
+      position: latLong,
       map: map,
       title: "Loading tunes..."
     }
     currentPos.marker = new google.maps.Marker(markerOpts);
   }
+  map.fitBounds(bounds);
 }
 
 function addTracks(map, positions, infoWindow) {
