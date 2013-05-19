@@ -24,9 +24,6 @@
     <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
     <script>
-var map;
-var infoWindow;
-var positions = {{ allPos|safe }};
 function initialize() {
   google.maps.visualRefresh = true;
   var mapOptions = {
@@ -34,37 +31,26 @@ function initialize() {
     center: new google.maps.LatLng({{ lat }}, {{ long }}),
     mapTypeId: google.maps.MapTypeId.ROADMAP
   };
-  map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-  makeTrip(map, positions);
+  var map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+  var infoWindow = new google.maps.InfoWindow();
+  google.maps.event.addListener(map, 'click', function() { infoWindow.close() });
+  var positions = {{ allPos|safe }};
+  var markers = makeTrip(map, positions, infoWindow);
 }
 
-function makeTrip(map, positions) {
+function makeTrip(map, positions, infoWindow) {
   var j = 0;
   var pts = positions.length;
+  var markers = [];
   $.getJSON('{{ lastFmUrl|safe }}', null, function(data) {
     var tracks = data.recenttracks.track;
-    var numTracks = tracks.length;
     for (;j<pts;j++) {
       var currentPos = positions[j];
       var listenTime = currentPos.time;
-      var si = 0;
-      var currentTrack = null;
-      while (si < numTracks) {
-        var track = tracks[si];
-        if (listenTime > parseInt(track.date.uts)) {
-            currentTrack = {
-                name: track.name,
-                artist: track.artist['#text'],
-                smallPic: track.image[0]['#text'],
-                largePic: track.image[2]['#text']
-            };
-            break;
-        }
-        si++;
-      }
-      var latLong = new google.maps.LatLng(currentPos.lat, currentPos.long);
+      var currentTrack = getCurrentTrack(tracks, listenTime);
+
       var markerOpts = {
-        position: latLong,
+        position: new google.maps.LatLng(currentPos.lat, currentPos.long),
         map: map,
         title: "Nothing scrobbled"
       }
@@ -73,12 +59,34 @@ function makeTrip(map, positions) {
         markerOpts.icon = currentTrack.smallPic;
       }
       var marker = new google.maps.Marker(markerOpts);
-      makeInfoWindow(currentPos, currentTrack, map, marker);
+      markers.push(marker);
+      makeInfoWindow(currentPos, currentTrack, map, marker, infoWindow);
     }
   });
+  return markers;
 }
 
-function makeInfoWindow(position, track, map, marker) {
+function getCurrentTrack(tracks, listenTime) {
+  var numTracks = tracks.length;
+  var si = 0;
+  var currentTrack = null;
+  while (si < numTracks) {
+    var track = tracks[si];
+    if (track.date && listenTime > parseInt(track.date.uts)) {
+      currentTrack = {
+        name: track.name,
+        artist: track.artist['#text'],
+        smallPic: track.image[0]['#text'],
+        largePic: track.image[2]['#text']
+      };
+      break;
+    }
+    si++;
+  }
+  return currentTrack;
+}
+
+function makeInfoWindow(position, track, map, marker, infoWindow) {
     var txt = "<table><tr><td><ul><li>Time: " + new Date(position.time * 1000) + "</li>" + 
              "<li>Speed: " + position.spd + "</li>";
     if (track) {
@@ -94,11 +102,9 @@ function makeInfoWindow(position, track, map, marker) {
 
     txt += "</tr></table>";
 
-    var infoWindow = new google.maps.InfoWindow({
-        content: txt
-    });
     google.maps.event.addListener(marker, 'click', function() {
-        infoWindow.open(map,marker);
+        infoWindow.setContent(txt);
+        infoWindow.open(map, marker);
     });
 }
 google.maps.event.addDomListener(window, 'load', initialize);
