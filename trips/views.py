@@ -12,8 +12,7 @@ def index(request, trackNum="0"):
         trackNum = Trip.objects.count() -1
     
     latest = Trip.objects.order_by('-id')[0:1].get()
-    allPos = latest.position_set.all()    
-    lastPos = latest.position_set.order_by('-dateoccurred')[0]
+    allPos = latest.position_set.all()
     template = loader.get_template('trips/index.html')
     def basics(pos):
         return {
@@ -25,9 +24,8 @@ def index(request, trackNum="0"):
     allString = json.dumps(map(basics, allPos))
     context = Context({
         'latest' : latest,
-        'lat' : "{0}".format(lastPos.latitude),
-        'long' : "{0}".format(lastPos.longitude),
         'allPos' : allString,
-        'lastFmUrl' : settings.LAST_FM_URL
+        'lastFmUrl' : settings.LAST_FM_URL,
+        'mapsKey' : settings.GOOGLE_API_KEY
     })
     return HttpResponse(template.render(context))
