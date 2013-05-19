@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Tunemapper</title>
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+      html, body, #map-canvas {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+      }
+      div.info {
+        float: left;
+      }
+      div.analbumcover {
+        height: 126px;
+        width: 126px;
+        min-height: 126px;
+        min-width: 126px;
+        float: right;
+      }
+    </style>
+    <script src="https://maps.googleapis.com/maps/api/js?v=3.exp&sensor=false"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script>
+var map;
+var infoWindow;
+var positions = {{ allPos|safe }};
+function initialize() {
+  google.maps.visualRefresh = true;
+  var mapOptions = {
+    zoom: 14,
+    center: new google.maps.LatLng({{ lat }}, {{ long }}),
+    mapTypeId: google.maps.MapTypeId.ROADMAP
+  };
+  map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
+  makeTrip(map, positions);
+}
+
+function makeTrip(map, positions) {
+  var j = 0;
+  var pts = positions.length;
+  $.getJSON('{{ lastFmUrl|safe }}', null, function(data) {
+    var tracks = data.recenttracks.track;
+    var numTracks = tracks.length;
+    for (;j<pts;j++) {
+      var currentPos = positions[j];
+      var listenTime = currentPos.time;
+      var si = 0;
+      var currentTrack = null;
+      while (si < numTracks) {
+        var track = tracks[si];
+        if (listenTime > parseInt(track.date.uts)) {
+            currentTrack = {
+                name: track.name,
+                artist: track.artist['#text'],
+                smallPic: track.image[0]['#text'],
+                largePic: track.image[2]['#text']
+            };
+            break;
+        }
+        si++;
+      }
+      var latLong = new google.maps.LatLng(currentPos.lat, currentPos.long);
+      var markerOpts = {
+        position: latLong,
+        map: map,
+        title: "Nothing scrobbled"
+      }
+      if (currentTrack) {
+        markerOpts.title = "Listening to " + currentTrack.name + " by " + currentTrack.artist;
+        markerOpts.icon = currentTrack.smallPic;
+      }
+      var marker = new google.maps.Marker(markerOpts);
+      makeInfoWindow(currentPos, currentTrack, map, marker);
+    }
+  });
+}
+
+function makeInfoWindow(position, track, map, marker) {
+    var txt = "<table><tr><td><ul><li>Time: " + new Date(position.time * 1000) + "</li>" + 
+             "<li>Speed: " + position.spd + "</li>";
+    if (track) {
+        txt += "<li>Track: " + track.name + "</li>" + 
+               "<li>Artist: " + track.artist + "</li>";
+    }
+
+    txt += "</ul></td>";
+
+    if (track) {
+        txt += "<td><div class='analbumcover'><img src='" + track.largePic + "'></div></td>";
+    }
+
+    txt += "</tr></table>";
+
+    var infoWindow = new google.maps.InfoWindow({
+        content: txt
+    });
+    google.maps.event.addListener(marker, 'click', function() {
+        infoWindow.open(map,marker);
+    });
+}
+google.maps.event.addDomListener(window, 'load', initialize);
+
+    </script>
+  </head>
+  <body>
+    <div id="map-canvas"></div>
+  </body>
+</html>
+
