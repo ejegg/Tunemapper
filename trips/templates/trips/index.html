@@ -37,12 +37,13 @@ function initialize() {
   var map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
   var infoWindow = new google.maps.InfoWindow();
   google.maps.event.addListener(map, 'click', function() { infoWindow.close() });
+  var line = new google.maps.Polyline({map: map});
   var positions = {{ allPos|safe }};
-  makeMarkers(map, positions);
+  makeMarkers(map, positions, line.getPath());
   addTracks(map, positions, infoWindow);
 }
 
-function makeMarkers(map, positions) {
+function makeMarkers(map, positions, path) {
   var j = 0;
   var pts = positions.length;
   var bounds = new google.maps.LatLngBounds();
@@ -56,6 +57,7 @@ function makeMarkers(map, positions) {
       title: "Loading tunes..."
     }
     currentPos.marker = new google.maps.Marker(markerOpts);
+    path.push(latLong);
   }
   map.fitBounds(bounds);
 }
