@@ -13,6 +13,11 @@
       div.info {
         float: left;
       }
+      ul {
+        list-style-type: none;
+        margin: 0;
+        padding: 0;
+      }
       div.analbumcover {
         height: 126px;
         width: 126px;
@@ -27,8 +32,6 @@
 function initialize() {
   google.maps.visualRefresh = true;
   var mapOptions = {
-    zoom: 14,
-    center: new google.maps.LatLng({{ lat }}, {{ long }}),
     mapTypeId: google.maps.MapTypeId.ROADMAP
   };
   var map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
@@ -58,29 +61,42 @@ function makeMarkers(map, positions) {
 }
 
 function addTracks(map, positions, infoWindow) {
+  var tracks;
+  var fromTo = 'from=' + positions[0].time + '&to=' + positions[positions.length - 1].time;
+  if (supports_html5_storage()) {
+    tracks = localStorage.getItem(fromTo);
+    if (tracks) {
+      addTrackData(map, positions, infoWindow, JSON.parse(tracks));
+      return;
+    }
+  }
+  var lfmUrl = '{{ lastFmUrl|safe }}&' + fromTo + '&format=json';
+  $.getJSON(lfmUrl, null, function(data) {
+    tracks = data.recenttracks.track;
+    if (supports_html5_storage()) {
+      localStorage.setItem(fromTo, JSON.stringify(tracks));
+    }
+    addTrackData(map, positions, infoWindow, tracks);
+  });
+}
+
+function addTrackData(map, positions, infoWindow, tracks) {
   var i = 0;
   var pts = positions.length;
-  var lfmUrl = '{{ lastFmUrl|safe }}';
-  lfmUrl += '&from=' + positions[0].time;
-  lfmUrl += '&to=' + positions[pts - 1].time;
-  lfmUrl += '&format=json';
-  $.getJSON(lfmUrl, null, function(data) {
-    var tracks = data.recenttracks.track;
-    for (;i<pts;i++) {
-      var currentPos = positions[i];
-      var listenTime = currentPos.time;
-      var currentTrack = getCurrentTrack(tracks, listenTime);
+  for (;i<pts;i++) {
+    var currentPos = positions[i];
+    var listenTime = currentPos.time;
+    var currentTrack = getCurrentTrack(tracks, listenTime);
 
-      var marker = currentPos.marker;
-      if (currentTrack) {
-        marker.setTitle("Listening to " + currentTrack.name + " by " + currentTrack.artist);
-        marker.setIcon(currentTrack.smallPic);
-      } else {
-        marker.setTitle("Nothing scrobbled");
-      }
-      makeInfoWindow(currentPos, currentTrack, map, marker, infoWindow);
+    var marker = currentPos.marker;
+    if (currentTrack) {
+      marker.setTitle("Listening to " + currentTrack.name + " by " + currentTrack.artist);
+      marker.setIcon(currentTrack.smallPic);
+    } else {
+      marker.setTitle("Nothing scrobbled");
     }
-  });
+    makeInfoWindow(currentPos, currentTrack, map, marker, infoWindow);
+  }
 }
 
 function getCurrentTrack(tracks, listenTime) {
@@ -120,6 +136,14 @@ function makeInfoWindow(position, track, map, marker, infoWindow) {
         infoWindow.setContent(txt);
         infoWindow.open(map, marker);
     });
+}
+
+function supports_html5_storage() {
+  try {
+    return 'localStorage' in window && window['localStorage'] !== null;
+  } catch (e) {
+    return false;
+  }
 }
 google.maps.event.addDomListener(window, 'load', initialize);
 
