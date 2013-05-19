@@ -8,13 +8,21 @@ from trips.models import Trip
 
 def index(request, trackNum="0"):
     trackNum = int(trackNum)
-    if (trackNum == 0 or trackNum > Trip.objects.count() -1):
-        trackNum = Trip.objects.count() -1
-    
-    latest = Trip.objects.order_by('-id')[0:1].get()
-    allPos = latest.position_set.all()
+    trips = Trip.objects.all();
+    if (trackNum == 0):
+        selectedTrip = Trip.objects.order_by('-id')[0:1].get()
+    else:
+        matchingTrips = filter(lambda t:t.id == trackNum, trips)
+        if (len(matchingTrips) == 1):
+            selectedTrip = matchingTrips[0]
+        else: 
+            return HttpResponse("Trip {0} not found".format(trackNum))
+        
+    allPos = selectedTrip.position_set.all()
     template = loader.get_template('trips/index.html')
     def basics(pos):
+        if (pos.speed is None):
+            pos.speed = 0;
         return {
             'time': long(time.mktime(pos.dateoccurred.timetuple())), 
             'lat': pos.latitude, 
@@ -23,7 +31,7 @@ def index(request, trackNum="0"):
         }
     allString = json.dumps(map(basics, allPos))
     context = Context({
-        'latest' : latest,
+        'latest' : selectedTrip,
         'allPos' : allString,
         'lastFmUrl' : settings.LAST_FM_URL,
         'mapsKey' : settings.GOOGLE_API_KEY
