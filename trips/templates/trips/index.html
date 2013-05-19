@@ -1,17 +1,31 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Tunemapper</title>
+    <title>Tunemapper - {{ selectedTrip.name }}</title>
     <meta name="viewport" content="initial-scale=1.0, user-scalable=no">
     <meta charset="utf-8">
+    <link rel="stylesheet" href="http://ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/ui-lightness/jquery-ui.css" />
     <style>
       html, body, #map-canvas {
         margin: 0;
         padding: 0;
         height: 100%;
       }
+      div.ui-dialog-titlebar {
+        display: none;
+      }
+      div#picker {
+        display: none;
+        background-color: white;
+        padding: 20px;
+        text-align: center;
+      }
       div.info {
         float: left;
+      }
+      div.pop {
+        background-color: white;
+        padding: 10px;
       }
       ul {
         list-style-type: none;
@@ -28,6 +42,7 @@
     </style>
     <script src="https://maps.googleapis.com/maps/api/js?key={{ mapsKey }}&sensor=false"></script>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
+    <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
     <script>
 function initialize() {
   google.maps.visualRefresh = true;
@@ -41,6 +56,21 @@ function initialize() {
   var positions = {{ allPos|safe }};
   makeMarkers(map, positions, line.getPath());
   addTracks(map, positions, infoWindow);
+  var pop = document.createElement('div');
+  pop.class = "pop";
+  pop.innerHTML = "<b>trips</b>";
+  pop.style.backgroundColor = 'white';
+  pop.style.padding = '3px';
+  pop.style.margin = '5px';
+  pop.style.fontSize = '14px';
+  google.maps.event.addDomListener(pop, 'click', function() {
+    $("#picker").dialog({modal:true});
+  });
+
+  map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(pop);
+  $("#picker select").change(function() { 
+    location.href = "/trips/" + $("#picker select option:selected").val(); 
+  });
 }
 
 function makeMarkers(map, positions, path) {
@@ -74,7 +104,7 @@ function addTracks(map, positions, infoWindow) {
   }
   var lfmUrl = '{{ lastFmUrl|safe }}&' + fromTo + '&format=json';
   $.getJSON(lfmUrl, null, function(data) {
-    tracks = data.recenttracks.track;
+    tracks = data.recenttracks.track || [];
     if (supports_html5_storage()) {
       localStorage.setItem(fromTo, JSON.stringify(tracks));
     }
@@ -93,7 +123,9 @@ function addTrackData(map, positions, infoWindow, tracks) {
     var marker = currentPos.marker;
     if (currentTrack) {
       marker.setTitle("Listening to " + currentTrack.name + " by " + currentTrack.artist);
-      marker.setIcon(currentTrack.smallPic);
+      if (currentTrack.smallPic != "") {
+        marker.setIcon({ url: currentTrack.smallPic, size: new google.maps.Size(34, 34)});
+      }
     } else {
       marker.setTitle("Nothing scrobbled");
     }
@@ -128,7 +160,7 @@ function makeInfoWindow(position, track, map, marker, infoWindow) {
 
     txt += "</ul></td>";
 
-    if (track) {
+    if (track && track.largePic != "") {
         txt += "<td><div class='analbumcover'><img src='" + track.largePic + "'></div></td>";
     }
 
@@ -153,6 +185,14 @@ google.maps.event.addDomListener(window, 'load', initialize);
   </head>
   <body>
     <div id="map-canvas"></div>
+    <div id="picker">
+        Select a trip:<br/>
+        <select>
+            {% for trip in trips %}
+            <option value="{{ trip.id }}"{% if trip.id == selectedTrip.id %} selected{% endif %}>{{ trip.name }}</option>
+            {% endfor %}
+        </select>
+    </div>
   </body>
 </html>
 
