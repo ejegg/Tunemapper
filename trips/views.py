@@ -28,6 +28,6 @@ def index(request, trackNum="0"):
         'lat' : "{0}".format(lastPos.latitude),
         'long' : "{0}".format(lastPos.longitude),
         'allPos' : allString,
-        'lastFmUrl' : "{0}&from={1}&to={2}&format=json".format(settings.LAST_FM_URL, basics(allPos[0])['time'], basics(allPos[len(allPos) - 1])['time'])
+        'lastFmUrl' : settings.LAST_FM_URL
     })
     return HttpResponse(template.render(context))

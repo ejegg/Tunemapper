@@ -35,55 +35,66 @@ function initialize() {
   var infoWindow = new google.maps.InfoWindow();
   google.maps.event.addListener(map, 'click', function() { infoWindow.close() });
   var positions = {{ allPos|safe }};
-  var markers = makeTrip(map, positions, infoWindow);
+  makeMarkers(map, positions);
+  addTracks(map, positions, infoWindow);
 }
 
-function makeTrip(map, positions, infoWindow) {
+function makeMarkers(map, positions) {
   var j = 0;
   var pts = positions.length;
-  var markers = [];
-  $.getJSON('{{ lastFmUrl|safe }}', null, function(data) {
+  for (;j<pts;j++) {
+    var currentPos = positions[j];
+    
+    var markerOpts = {
+      position: new google.maps.LatLng(currentPos.lat, currentPos.long),
+      map: map,
+      title: "Loading tunes..."
+    }
+    currentPos.marker = new google.maps.Marker(markerOpts);
+  }
+}
+
+function addTracks(map, positions, infoWindow) {
+  var i = 0;
+  var pts = positions.length;
+  var lfmUrl = '{{ lastFmUrl|safe }}';
+  lfmUrl += '&from=' + positions[0].time;
+  lfmUrl += '&to=' + positions[pts - 1].time;
+  lfmUrl += '&format=json';
+  $.getJSON(lfmUrl, null, function(data) {
     var tracks = data.recenttracks.track;
-    for (;j<pts;j++) {
-      var currentPos = positions[j];
+    for (;i<pts;i++) {
+      var currentPos = positions[i];
       var listenTime = currentPos.time;
       var currentTrack = getCurrentTrack(tracks, listenTime);
 
-      var markerOpts = {
-        position: new google.maps.LatLng(currentPos.lat, currentPos.long),
-        map: map,
-        title: "Nothing scrobbled"
-      }
+      var marker = currentPos.marker;
       if (currentTrack) {
-        markerOpts.title = "Listening to " + currentTrack.name + " by " + currentTrack.artist;
-        markerOpts.icon = currentTrack.smallPic;
+        marker.setTitle("Listening to " + currentTrack.name + " by " + currentTrack.artist);
+        marker.setIcon(currentTrack.smallPic);
+      } else {
+        marker.setTitle("Nothing scrobbled");
       }
-      var marker = new google.maps.Marker(markerOpts);
-      markers.push(marker);
       makeInfoWindow(currentPos, currentTrack, map, marker, infoWindow);
     }
   });
-  return markers;
 }
 
 function getCurrentTrack(tracks, listenTime) {
   var numTracks = tracks.length;
-  var si = 0;
-  var currentTrack = null;
-  while (si < numTracks) {
-    var track = tracks[si];
+  var i = 0;
+  for (;i < numTracks; i++) {
+    var track = tracks[i];
     if (track.date && listenTime > parseInt(track.date.uts)) {
-      currentTrack = {
+      return {
         name: track.name,
         artist: track.artist['#text'],
         smallPic: track.image[0]['#text'],
         largePic: track.image[2]['#text']
       };
-      break;
     }
-    si++;
   }
-  return currentTrack;
+  return null;
 }
 
 function makeInfoWindow(position, track, map, marker, infoWindow) {
