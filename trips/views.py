@@ -30,7 +30,11 @@ def index(request, trackNum="0"):
             'spd': "{0} mph".format(pos.speed * 2.2369362920544)
         }
     allString = json.dumps(map(basics, allPos))
+    if (request.is_ajax()):
+        return HttpResponse(allString)
+    
     allTrips = json.dumps(map(lambda t: {'name': t.name, 'id': t.id}, trips))
+
     context = Context({
         'selectedTrip' : selectedTrip,
         'allPos' : allString,

@@ -27,6 +27,10 @@
         background-color: white;
         padding: 10px;
       }
+      span#loading {
+        display:none;
+        text-decoration:blink;
+      }
       ul {
         list-style-type: none;
         margin: 0;
@@ -58,19 +62,41 @@ function initialize() {
   addTracks(map, positions, infoWindow);
   var pop = document.createElement('div');
   pop.class = "pop";
-  pop.innerHTML = "<b>trips</b>";
+  pop.innerHTML = "<b>Trips</b>";
   pop.style.backgroundColor = 'white';
-  pop.style.padding = '3px';
+  pop.style.padding = '1px 6px';
   pop.style.margin = '5px';
+  pop.style.fontFamily = 'Roboto, Arial, sans-serif';
   pop.style.fontSize = '14px';
+  pop.style.cursor = 'pointer';
+  pop.style.border = 'solid grey 1px';
   google.maps.event.addDomListener(pop, 'click', function() {
     $("#picker").dialog({modal:true});
   });
 
   map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(pop);
   $("#picker select").change(function() { 
-    location.href = "/trips/" + $("#picker select option:selected").val(); 
+    $("#loading").show();
+    $.getJSON("/trips/" + $("#picker select option:selected").val(), function(data) {
+      $("#loading").hide();
+      $("#picker").dialog('close');
+      clearTrip(positions, line);
+      positions = data; 
+      makeMarkers(map, positions, line.getPath());
+      addTracks(map, positions, infoWindow);
+    }); 
   });
+}
+
+function clearTrip(positions, line) {
+  line.getPath().clear();
+  for(var p in positions) {
+    var marker = positions[p].marker;
+    if (marker) {
+      marker.unbindAll();
+      marker.setMap(null);
+    }
+  }
 }
 
 function makeMarkers(map, positions, path) {
@@ -192,6 +218,7 @@ google.maps.event.addDomListener(window, 'load', initialize);
             <option value="{{ trip.id }}"{% if trip.id == selectedTrip.id %} selected{% endif %}>{{ trip.name }}</option>
             {% endfor %}
         </select>
+        <span id="loading">loading...</span>
     </div>
   </body>
 </html>
