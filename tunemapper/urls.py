@@ -6,6 +6,9 @@ from django.conf.urls import patterns, include, url
 
 urlpatterns = patterns('',
     url(r'^trips/', include('trips.urls')),
+    url(r'^/$', include('trips.urls')),
+    url(r'^$', include('trips.urls')),
+    url(r'^tracks/', include('tracks.urls')),
     # Examples:
     # url(r'^$', 'tunemapper.views.home', name='home'),
     # url(r'^tunemapper/', include('tunemapper.foo.urls')),

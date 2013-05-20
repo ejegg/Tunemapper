@@ -7,4 +7,3 @@ urlpatterns = patterns('',
     url(r'^(?P<trackNum>\d+)$', views.index, name='index'),
     url(r'^(?P<trackNum>\d+)/$', views.index, name='index')
 )
-                        

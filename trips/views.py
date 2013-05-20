@@ -19,7 +19,6 @@ def index(request, trackNum="0"):
             return HttpResponse("Trip {0} not found".format(trackNum))
         
     allPos = selectedTrip.position_set.all()
-    template = loader.get_template('trips/index.html')
     def basics(pos):
         if (pos.speed is None):
             pos.speed = 0;
@@ -33,6 +32,7 @@ def index(request, trackNum="0"):
     if (request.is_ajax()):
         return HttpResponse(allString)
     
+    template = loader.get_template('trips/index.html')
     allTrips = json.dumps(map(lambda t: {'name': t.name, 'id': t.id}, trips))
 
     context = Context({
