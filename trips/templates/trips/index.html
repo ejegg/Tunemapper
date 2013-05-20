@@ -182,6 +182,7 @@ function makeInfoWindow(position, track, map, marker, infoWindow) {
     if (track) {
         txt += "<li>Track: " + track.name + "</li>" + 
                "<li>Artist: " + track.artist + "</li>";
+
     }
 
     txt += "</ul></td>";
@@ -195,6 +196,14 @@ function makeInfoWindow(position, track, map, marker, infoWindow) {
     google.maps.event.addListener(marker, 'click', function() {
         infoWindow.setContent(txt);
         infoWindow.open(map, marker);
+        if (track) {
+            $.getJSON('/tracks/' + track.artist + '/' + track.name, function(data) {
+                if (data && data != "-1") {
+                    $('audio').remove();
+                    $('<audio src="/tracks/' + data + '" controls autoplay></audio>').appendTo($('body'));
+                }
+            });
+        }
     });
 }
 
