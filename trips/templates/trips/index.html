@@ -43,10 +43,15 @@
         min-width: 126px;
         float: right;
       }
+      audio {
+        visibility: none;
+        display: hidden;
+      }
     </style>
     <script src="https://maps.googleapis.com/maps/api/js?key={{ mapsKey }}&sensor=false"></script>
     <script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.0/jquery.min.js"></script>
     <script src="//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/jquery-ui.min.js"></script>
+    <!--script src="/static/jquerybbq.min.js"></script-->
     <script>
 function initialize() {
   google.maps.visualRefresh = true;
@@ -59,7 +64,12 @@ function initialize() {
   var line = new google.maps.Polyline({map: map});
   var positions = {{ allPos|safe }};
   makeMarkers(map, positions, line.getPath());
-  addTracks(map, positions, infoWindow);
+
+  var player = document.createElement('audio');
+  player.autoplay = true;
+  player.controls = true;
+
+  addTracks(map, positions, infoWindow, player);
   var pop = document.createElement('div');
   pop.class = "pop";
   pop.innerHTML = "<b>Trips</b>";
@@ -73,22 +83,22 @@ function initialize() {
   google.maps.event.addDomListener(pop, 'click', function() {
     $("#picker").dialog({modal:true});
   });
-
   map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(pop);
   $("#picker select").change(function() { 
     $("#loading").show();
     $.getJSON("/trips/" + $("#picker select option:selected").val(), function(data) {
       $("#loading").hide();
       $("#picker").dialog('close');
-      clearTrip(positions, line);
+      clearTrip(map, positions, line);
       positions = data; 
       makeMarkers(map, positions, line.getPath());
-      addTracks(map, positions, infoWindow);
+      addTracks(map, positions, infoWindow, player);
     }); 
   });
 }
 
-function clearTrip(positions, line) {
+function clearTrip(map, positions, line) {
+  map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
   line.getPath().clear();
   for(var p in positions) {
     var marker = positions[p].marker;
@@ -118,13 +128,13 @@ function makeMarkers(map, positions, path) {
   map.fitBounds(bounds);
 }
 
-function addTracks(map, positions, infoWindow) {
+function addTracks(map, positions, infoWindow, player) {
   var tracks;
   var fromTo = 'from=' + positions[0].time + '&to=' + positions[positions.length - 1].time;
   if (supports_html5_storage()) {
     tracks = localStorage.getItem(fromTo);
     if (tracks) {
-      addTrackData(map, positions, infoWindow, JSON.parse(tracks));
+      addTrackData(map, positions, infoWindow, JSON.parse(tracks), player);
       return;
     }
   }
@@ -134,11 +144,11 @@ function addTracks(map, positions, infoWindow) {
     if (supports_html5_storage()) {
       localStorage.setItem(fromTo, JSON.stringify(tracks));
     }
-    addTrackData(map, positions, infoWindow, tracks);
+    addTrackData(map, positions, infoWindow, tracks, player);
   });
 }
 
-function addTrackData(map, positions, infoWindow, tracks) {
+function addTrackData(map, positions, infoWindow, tracks, player) {
   var i = 0;
   var pts = positions.length;
   for (;i<pts;i++) {
@@ -155,7 +165,7 @@ function addTrackData(map, positions, infoWindow, tracks) {
     } else {
       marker.setTitle("Nothing scrobbled");
     }
-    makeInfoWindow(currentPos, currentTrack, map, marker, infoWindow);
+    makeInfoWindow(currentPos, currentTrack, map, marker, infoWindow, player);
   }
 }
 
@@ -176,7 +186,7 @@ function getCurrentTrack(tracks, listenTime) {
   return null;
 }
 
-function makeInfoWindow(position, track, map, marker, infoWindow) {
+function makeInfoWindow(position, track, map, marker, infoWindow, player) {
     var txt = "<table><tr><td><ul><li>Time: " + new Date(position.time * 1000) + "</li>" + 
              "<li>Speed: " + position.spd + "</li>";
     if (track) {
@@ -199,8 +209,9 @@ function makeInfoWindow(position, track, map, marker, infoWindow) {
         if (track) {
             $.getJSON('/tracks/' + track.artist + '/' + track.name, function(data) {
                 if (data && data != "-1") {
-                    $('audio').remove();
-                    $('<audio src="/tracks/' + data + '" controls autoplay></audio>').appendTo($('body'));
+                    map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
+                    player.src ='/tracks/' + data
+                    map.controls[google.maps.ControlPosition.TOP_CENTER].push(player);
                 }
             });
         }

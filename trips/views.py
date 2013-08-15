@@ -3,8 +3,10 @@ from django.template import Context, loader
 from django.conf import settings
 import json
 import time
+import datetime
+import hashlib
 
-from trips.models import Trip
+from trips.models import Trip,User,Position
 
 def index(request, trackNum="0"):
     trackNum = int(trackNum)
@@ -43,3 +45,54 @@ def index(request, trackNum="0"):
         'mapsKey' : settings.GOOGLE_API_KEY
     })
     return HttpResponse(template.render(context))
+
+def upload(request):
+    username = request.REQUEST.get('u', '')
+    pw = request.REQUEST.get('p', '')
+    if (username == '' or pw == ''):
+        return HttpResponse('Result:3')
+    
+    hashed = hashlib.md5('trackmeuser{0}'.format(pw)).hexdigest()
+    user = None
+    users = User.objects.filter(username=username, password=hashed)
+    
+    if (len(users) == 1):
+        user = users[0]
+    else:
+        users = User.objects.filter(username=username)
+        if (len(users) == 0):
+            user = User(username=username, password=hashed)
+            user.save();
+        else:
+            return HttpResponse(hashed)
+    
+    tripname = request.REQUEST.get('tn', '')
+    action = request.REQUEST.get('a', '0')
+    lat = request.REQUEST.get('lat', '0')
+    lon = request.REQUEST.get('long', '0')
+    dateoccurred = request.REQUEST.get('do', '1970-01-01 00:00:00')
+    altitude = request.REQUEST.get('alt', '0')
+    angle = request.REQUEST.get('ang', '0')
+    speed = request.REQUEST.get('sp', '0')
+    
+    if (action == 'upload'):
+        trip = None
+        trips = Trip.objects.filter(name=tripname, user=user)
+        if (len(trips) == 1):
+            trip = trips[0]
+        else:
+            trip = Trip(name=tripname, user=user)
+            trip.save()
+
+        pos = Position(user = user, 
+                       trip = trip,
+                       latitude = float(lat),
+                       longitude = float(lon),
+                       altitude = float(altitude),
+                       speed = float(speed),
+                       angle = float(angle),
+                       dateadded = datetime.datetime.now(),
+                       dateoccurred = datetime.datetime.strptime(dateoccurred, '%Y-%m-%d %H:%M:%S', 'America/New_York'))
+        pos.save()
+        
+        return HttpResponse('Result:0')
