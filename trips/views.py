@@ -74,7 +74,13 @@ def upload(request):
     altitude = request.REQUEST.get('alt', '0')
     angle = request.REQUEST.get('ang', '0')
     speed = request.REQUEST.get('sp', '0')
-    
+    try:
+	dateParsed = datetime.datetime.strptime(dateoccurred, '%Y-%m-%d %H:%M:%S')
+    except ValueError:
+       dateParsed = datetime.datetime.now()
+    if (dateParsed.year < 1970):
+       return HttpResponse('Result:0')
+ 
     if (action == 'upload'):
         trip = None
         trips = Trip.objects.filter(name=tripname, user=user)
@@ -92,7 +98,7 @@ def upload(request):
                        speed = float(speed),
                        angle = float(angle),
                        dateadded = datetime.datetime.now(),
-                       dateoccurred = datetime.datetime.strptime(dateoccurred, '%Y-%m-%d %H:%M:%S', 'America/New_York'))
+                       dateoccurred = dateparsed)
         pos.save()
         
         return HttpResponse('Result:0')
