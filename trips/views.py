@@ -28,7 +28,7 @@ def index(request, trackNum="0"):
             'time': long(time.mktime(pos.dateoccurred.timetuple())), 
             'lat': pos.latitude, 
             'long': pos.longitude,
-            'spd': "{0} mph".format(pos.speed * 2.2369362920544)
+            'spd': pos.speed#"{0} mph".format(pos.speed * 2.2369362920544)
         }
     allString = json.dumps(map(basics, allPos))
     if (request.is_ajax()):
