@@ -74,6 +74,8 @@ def upload(request):
     altitude = request.REQUEST.get('alt', '0')
     angle = request.REQUEST.get('ang', '0')
     speed = request.REQUEST.get('sp', '0')
+    dateParsed = None
+    
     try:
 	dateParsed = datetime.datetime.strptime(dateoccurred, '%Y-%m-%d %H:%M:%S')
     except ValueError:
@@ -98,7 +100,7 @@ def upload(request):
                        speed = float(speed),
                        angle = float(angle),
                        dateadded = datetime.datetime.now(),
-                       dateoccurred = dateparsed)
+                       dateoccurred = dateParsed)
         pos.save()
         
         return HttpResponse('Result:0')

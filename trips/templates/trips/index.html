@@ -55,11 +55,6 @@
     <script>
 function SpeedPathOverlay(map, positions, bounds) {
     google.maps.OverlayView.call(this);
-    this.latLong_ = [];
-    var j;
-    for(j = 0; j < positions.length; j++)  {
-        this.latLong_[j] = new google.maps.LatLng(positions[j].lat, positions[j].long);
-    }
     this.positions_ = positions;
     this.map_ = map;
     this.bounds_ = bounds;
@@ -82,7 +77,7 @@ SpeedPathOverlay.prototype.onAdd = function() {
     canvas.style.margin = '0px';
     this.canvas_ = canvas;
     var panes = this.getPanes();
-    panes.overlayImage.appendChild(canvas);
+    panes.overlayLayer.appendChild(canvas);
 
     if (!canvas.getContext) {
         alert("Need canvas!");
@@ -113,31 +108,46 @@ SpeedPathOverlay.prototype.draw = function() {
     canvas.setAttribute('width', ne.x - sw.x);
     canvas.setAttribute('height', sw.y - ne.y);
 
+    ctx.linecap = 'round';
+    ctx.lineWidth=7;
+    ctx.strokeStyle = 'rgb(0,0,0)';
+    ctx.beginPath();
+    var j = 0;
+    for (;j<pts;j++) {
+        position = positions[j];
+        position.point = proj.fromLatLngToDivPixel(position.latLong);
+        position.point.x -= left;
+        position.point.y -= top;
+
+        if (j == 0) {
+            ctx.moveTo(position.point.x, position.point.y);
+        } else {
+            ctx.lineTo(position.point.x, position.point.y);
+        }
+    }
+    ctx.stroke();
+
     ctx.lineWidth=5;
-    //var lastLatLong = this.latLong_[0];
-    var currentPoint = proj.fromLatLngToDivPixel(this.latLong_[0]);
-    var currentX = currentPoint.x - left;
-    var currentY = currentPoint.y - top;
+
+    var currentPoint = positions[0].point;
+    var currentX = currentPoint.x;
+    var currentY = currentPoint.y;
     var position;
     var j = 1;
-    //var nextLatLong;
 
     for (;j<pts;j++) {
-        //nextLatLong = this.latLong_[j];
-        //if (!(mb.contains(lastLatLong) || mb.contains(nextLatLong))) {
-            //continue;
-        //}
-        currentPoint = proj.fromLatLngToDivPixel(this.latLong_[j]);
         position = positions[j];
         if (position.color) {
             ctx.strokeStyle = "rgb(" + position.color[0] + "," + position.color[1] + "," + position.color[2] + ")";
         } else {
-            ctx.strokeStyle = "rgb(200," + (this.positions_[j].spd  * 10) + ",0)";
+            var c = 25 * position.spd;
+            ctx.strokeStyle = "rgb(" + c + "," + c + "," + c + ")";
         }
         ctx.beginPath();
         ctx.moveTo(currentX, currentY);
-        currentX = currentPoint.x - left;
-        currentY = currentPoint.y - top;
+        currentPoint = position.point;
+        currentX = currentPoint.x;
+        currentY = currentPoint.y;
         ctx.lineTo(currentX, currentY);
         ctx.stroke();
     }
@@ -161,7 +171,7 @@ function initialize() {
   player.autoplay = true;
   player.controls = true;
 
-  addTracks(map, positions, infoWindow, player);
+  addTracks(map, positions, infoWindow, player, speedPath);
   var pop = document.createElement('div');
   pop.class = "pop";
   pop.innerHTML = "<b>Trips</b>";
@@ -207,15 +217,8 @@ function makeMarkers(map, positions) {
   var bounds = new google.maps.LatLngBounds();
   for (;j<pts;j++) {
     var currentPos = positions[j];
-    var latLong = new google.maps.LatLng(currentPos.lat, currentPos.long);
-    bounds.extend(latLong);
-    var markerOpts = {
-      position: latLong,
-      map: map,
-      title: "Loading tunes..."
-    }
-    currentPos.marker = new google.maps.Marker(markerOpts);
-    //path.push(latLong);
+    currentPos.latLong = new google.maps.LatLng(currentPos.lat, currentPos.long);
+    bounds.extend(currentPos.latLong);
   }
   map.fitBounds(bounds);
   return new SpeedPathOverlay(map, positions, bounds);
@@ -246,33 +249,43 @@ function addTrackData(map, positions, infoWindow, tracks, player) {
   var i = 0;
   var pts = positions.length;
   var lastTrack;
-  var cols = [ [25,0,0], [0,25,0], [0,0,25] ];
+  var cols = [ [25,0,0], [25, 25, 0], [0,25,0], [5,5,25] ];
   var colIndex = 0;
   var currentColor = cols[0];
+  var lastChangeIndex = 0;
 
   for (;i<pts;i++) {
     var currentPos = positions[i];
     var listenTime = currentPos.time;
     var currentTrack = getCurrentTrack(tracks, listenTime);
+    currentPos.color = [50 + currentColor[0] * currentPos.spd, 50 + currentColor[1] * currentPos.spd, 50 + currentColor[2] * currentPos.spd];
 
-    var marker = currentPos.marker;
     if (currentTrack) {
-      if (!lastTrack || lastTrack.artist != currentTrack.artist || lastTrack.name != currentTrack.name) {
+      if (i == pts -1 || !lastTrack || lastTrack.artist != currentTrack.artist || lastTrack.name != currentTrack.name) {
         colIndex = (colIndex + 1) % (cols.length);
         currentColor = cols[colIndex];
+
+        var midpoint = positions[Math.round((i + lastChangeIndex) / 2)];
+
+        var markerOpts = {
+            position: midpoint.latLong,
+            map: map,
+            title: lastTrack ? "Listening to " + lastTrack.name + " by " + lastTrack.artist : "Nothing scrobbled"
+        }
+        midpoint.marker = new google.maps.Marker(markerOpts);
+        if (lastTrack && lastTrack.smallPic != "") {
+            midpoint.marker.setIcon({ url: lastTrack.smallPic, size: new google.maps.Size(34, 34)});
+        }
+        makeInfoWindow(midpoint, lastTrack, map, infoWindow, player);
+
+        lastChangeIndex = i;
         lastTrack = currentTrack;
       }
-      currentPos.color = [50 + currentColor[0] * currentPos.spd, 50 + currentColor[1] * currentPos.spd, 50 + currentColor[2] * currentPos.spd];
-      marker.setTitle("Listening to " + currentTrack.name + " by " + currentTrack.artist);
-      if (currentTrack.smallPic != "") {
-        marker.setIcon({ url: currentTrack.smallPic, size: new google.maps.Size(34, 34)});
-      }
     } else {
-      marker.setTitle("Nothing scrobbled");
       var c = 25 * currentPos.spd;
       currentPos.color = [c,c,c];
     }
-    makeInfoWindow(currentPos, currentTrack, map, marker, infoWindow, player);
+
   }
 }
 
@@ -293,13 +306,13 @@ function getCurrentTrack(tracks, listenTime) {
   return null;
 }
 
-function makeInfoWindow(position, track, map, marker, infoWindow, player) {
+function makeInfoWindow(position, track, map, infoWindow, player) {
+    var marker = position.marker;
     var txt = "<table><tr><td><ul><li>Time: " + new Date(position.time * 1000) + "</li>" + 
              "<li>Speed: " + position.spd + "</li>";
     if (track) {
         txt += "<li>Track: " + track.name + "</li>" + 
                "<li>Artist: " + track.artist + "</li>";
-
     }
 
     txt += "</ul></td>";
