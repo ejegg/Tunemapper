@@ -1,0 +1,41 @@
+html, body, #map-canvas {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+}
+div.ui-dialog-titlebar {
+  display: none;
+}
+div#picker {
+  display: none;
+  background-color: white;
+  padding: 20px;
+  text-align: center;
+}
+div.info {
+  float: left;
+}
+div.pop {
+  background-color: white;
+  padding: 10px;
+}
+span#loading {
+  display:none;
+  text-decoration:blink;
+}
+ul {
+  list-style-type: none;
+  margin: 0;
+  padding: 0;
+}
+div.analbumcover {
+  height: 126px;
+  width: 126px;
+  min-height: 126px;
+  min-width: 126px;
+  float: right;
+}
+audio {
+  visibility: none;
+  display: hidden;
+}

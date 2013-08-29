@@ -28,14 +28,13 @@ def index(request, trackNum="0"):
             'time': long(time.mktime(pos.dateoccurred.timetuple())), 
             'lat': pos.latitude, 
             'long': pos.longitude,
-            'spd': pos.speed#"{0} mph".format(pos.speed * 2.2369362920544)
+            'spd': pos.speed
         }
     allString = json.dumps(map(basics, allPos))
     if (request.is_ajax()):
         return HttpResponse(allString)
     
     template = loader.get_template('trips/index.html')
-    allTrips = json.dumps(map(lambda t: {'name': t.name, 'id': t.id}, trips))
 
     context = Context({
         'selectedTrip' : selectedTrip,
@@ -77,11 +76,11 @@ def upload(request):
     dateParsed = None
     
     try:
-	dateParsed = datetime.datetime.strptime(dateoccurred, '%Y-%m-%d %H:%M:%S')
+        dateParsed = datetime.datetime.strptime(dateoccurred, '%Y-%m-%d %H:%M:%S')
     except ValueError:
-       dateParsed = datetime.datetime.now()
+        dateParsed = datetime.datetime.now()
     if (dateParsed.year < 1970):
-       return HttpResponse('Result:0')
+        return HttpResponse('Result:0')
  
     if (action == 'upload'):
         trip = None
