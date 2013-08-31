@@ -164,3 +164,4 @@ LOGGING = {
 #Add your Last.fm username and Last.fm and Google Maps API keys here:
 LAST_FM_URL = "http://ws.audioscrobbler.com/2.0/?method=user.getrecenttracks&user=<your last.fm user name>&api_key=<your last.fm API key>"
 GOOGLE_API_KEY = "<your Google Maps API key>"
+MP3_ROOT = "/path/to/mp3s"

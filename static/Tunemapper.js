@@ -55,8 +55,10 @@ function Tunemapper(lastFmUrl, positions) {
 	function clearTrip() {
 	  that.map.controls[google.maps.ControlPosition.TOP_CENTER].clear();
 	  var positions = that.positions;
-	  for(var p in positions) {
-	    var marker = positions[p].marker;
+	  var i = 0;
+	  var pts = positions.length;
+	  for(; i < pts; i++) {
+	    var marker = positions[i].marker;
 	    if (marker) {
 	      marker.unbindAll();
 	      marker.setMap(null);

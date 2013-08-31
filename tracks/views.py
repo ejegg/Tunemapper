@@ -3,9 +3,6 @@ from django.conf import settings
 from django.db.models import Q
 from django.core.servers.basehttp import FileWrapper
 
-import mimetypes
-import json
-
 from tracks.models import Track
 
 def lookup(request, artist="", title=""):
@@ -24,7 +21,7 @@ def play(request, trackId):
     if len(tracks) == 0:
         return HttpResponse("")
     track = tracks[0]
-    path = "/mp3s/{0}/{1}/{2}".format(track.album.artist.name, track.album.name, track.filename)
+    path = "{0}/{1}/{2}/{3}".format(settings.MP3_ROOT, track.album.artist.name, track.album.name, track.filename)
     wrapper = FileWrapper(open(path, "rb"))
     response = HttpResponse(wrapper, content_type='audio/mpeg')
     response['Content-Length'] = track.size

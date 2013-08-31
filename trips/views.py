@@ -51,7 +51,8 @@ def upload(request):
     if (username == '' or pw == ''):
         return HttpResponse('Result:3')
     
-    hashed = hashlib.md5('trackmeuser{0}'.format(pw)).hexdigest()
+    #Using this poor hash and fixed salt to maintain compatibility with Luis Espinosa's PHP-based server 
+    hashed = hashlib.md5('trackmeuser{0}'.format(pw)).hexdigest() 
     user = None
     users = User.objects.filter(username=username, password=hashed)
     
