@@ -8,14 +8,16 @@ function Tunemapper(lastFmUrl, positions) {
 	var that = this; 
 	
 	this.initialize = function() {
-	  google.maps.visualRefresh = true;
-	  var mapOptions = {
-	    mapTypeId: google.maps.MapTypeId.ROADMAP
-	  };
-	  that.map = new google.maps.Map(document.getElementById('map-canvas'), mapOptions);
-	  that.infoWindow = new google.maps.InfoWindow();
-	  google.maps.event.addListener(that.map, 'click', function() { that.infoWindow.close() });
-
+	  that.map = L.map('map-canvas');
+	  that.infoWindow = L.popup();
+        that.map.on('click', function(e) {
+            that.infoWindow.close();
+        });
+	  //google.maps.event.addListener(that.map, 'click', function() { that.infoWindow.close() });
+      L.tileLayer('//maps.wikimedia.org/osm-intl/{z}/{x}/{y}.png', {
+        attribution: 'Map data &copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+        maxZoom: 18
+      } ).addTo(that.map);
 	  that.player = document.createElement('audio');
 	  that.player.autoplay = true;
 	  that.player.controls = true;
@@ -30,11 +32,11 @@ function Tunemapper(lastFmUrl, positions) {
 	  pop.style.fontSize = '14px';
 	  pop.style.cursor = 'pointer';
 	  pop.style.border = 'solid grey 1px';
-	  google.maps.event.addDomListener(pop, 'click', function() {
+	  /*google.maps.event.addDomListener(pop, 'click', function() {
 	    $("#picker").dialog({modal:true});
-	  });
+	  });*/
 	  
-	  that.map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(pop);
+	  //that.map.controls[google.maps.ControlPosition.RIGHT_BOTTOM].push(pop);
 	  makeMarkers();
 	  addTracks();
 	  
@@ -70,12 +72,20 @@ function Tunemapper(lastFmUrl, positions) {
 	  var positions = that.positions;
 	  var j = 0;
 	  var pts = positions.length;
-	  var bounds = new google.maps.LatLngBounds();
+	  var bounds;
+        var latLngs = [];
+        var lastPos;
 	  for (;j<pts;j++) {
 	    var currentPos = positions[j];
-	    currentPos.latLong = new google.maps.LatLng(currentPos.lat, currentPos.long);
-	    bounds.extend(currentPos.latLong);
+          currentPos.latLong = L.latLng( currentPos.lat, currentPos.long );
+          latLngs.push(currentPos.latLong);
+          if (lastPos) {
+              L.polyline( [lastPos.latLong, currentPos.latLong ] ).addTo( that.map );
+          }
+          lastPos = currentPos;
 	  }
+      bounds = L.latLngBounds( latLngs );
+      
 	  that.map.fitBounds(bounds);
 	  that.speedPath = new SpeedPathOverlay(that.map, positions, bounds);
 	}
